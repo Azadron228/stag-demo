@@ -3,6 +3,7 @@
 namespace App\controllers\auth;
 
 use App\models\User;
+use App\validators\LoginValidator;
 use App\validators\UserValidator;
 use Psr\Http\Message\ResponseInterface;
 use Stag\Auth\Auth;
@@ -16,15 +17,21 @@ class AuthController
     $this->user = $user;
   }
 
-  public function login(): ResponseInterface
+  public function login(LoginValidator $validator): ResponseInterface
   {
     $data = json_decode(request()->getBody()->getContents(), true);
-    $user = $this->user->getUserByEmail($data['email']);
+    $isValid = $validator->validate($data);
 
-    if (Auth::attempt($user, $data['password'])) {;
-      return json_response(['Succsefull']);
+    if ($isValid) {
+      $data = $validator->getValidatedData();
+      $user = $this->user->getUserByEmail($data['email']);
+
+      if (Auth::attempt($user, $data['password'])) {;
+        return json_response(['Succsefull']);
+      }
+      return json_response(['Invalid credentials']);
     }
-    return json_response(['Invalid credentials']);
+    return json_response($validator->getErrors());
   }
 
   public function createUser(UserValidator $validator): ResponseInterface
